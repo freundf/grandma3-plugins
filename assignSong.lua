@@ -1,62 +1,43 @@
-local function getActiveSequenceNames()
+local function getSongs()
 	local seqPool = DataPool().Sequences
-	local activeSeqNames = {}
+	local songSet = {}
+
 	for i = 1, #seqPool do
 		local seq = seqPool[i]
-		if IsObjectValid(seq) and seq.No > 1000 then
-			activeSeqNames[seq.Name] = true
-		end
-	end
-	return activeSeqNames
-end
-
-local function loadSongTable()
-	local songStr = GetVar(GlobalVars(), "SongList") or ""
-	if songStr == "" then return {} end
-	
-	local songTable = {}
-	for item in string.gmatch(songStr, "([^,]+)") do
-		local it = string.match(item, "^%s*(.-)%s*$")
-		table.insert(songTable, it)
-	end
-	
-	local activeSeqNames = getActiveSequenceNames()
-	local validSongs = {}
-	for _, song in ipairs(songTable) do
-		if activeSeqNames[song] then
-			table.insert(validSongs, song)
+		if IsObjectValid(seq) and seq.No >= 1001 and seq.No <= 1999 then
+			songSet[seq.Name] = true
 		end
 	end
 	
-	return validSongs
-end
-
-local function saveSongTable(songTable)
-	local updatedStr = table.concat(songTable, ", ")
-	SetVar(GlobalVars(), "SongList", updatedStr)
+	local sortedSongs = {}
+	for song, _ in pairs(songSet) do
+		table.insert(sortedSongs, song)
+	end
+	table.sort(sortedSongs)
+	
+	return sortedSongs
 end
 
 local function main(displayHandle)
-	local songTable = loadSongTable()
+	local songs = getSongs()
 	
-	if #songTable == 0 then
-		Printf("SongList is empty or no valid sequences > 1000 found.")
+	if #songs == 0 then
+		Printf("SongList is empty.")
 		return
 	end
-	
-	saveSongTable(songTable)
+
 	
 	local selectedIndex, selectedValue = PopupInput({
 		title = "Select Song from List", 
 		caller = displayHandle,
-		items = songTable,
-		selectedValue = songTable[1],
+		items = songs,
+		selectedValue = songs[1],
 		add_args = {FilterSupport = "Yes"},
 	})
 	
 	if selectedValue then
 		Printf("Selected: " .. selectedValue)
-		Cmd("Assign Sequence " .. selectedValue .. " At Layout 7")
+		Cmd("Assign Sequence '" .. selectedValue .. "' At Layout 7")
 	end
 end
 
