@@ -1,3 +1,7 @@
+package.loaded["songlib.Layout"] = nil
+package.loaded["songlib.Songs"] = nil
+package.loaded["songlib.Util"] = nil
+
 local layoutModule = require("songlib.Layout")
 local positions = layoutModule.positions
 local songLib = require("songlib.Songs")
@@ -42,12 +46,7 @@ local function main(displayHandle)
 		end
 	end
 
-	local currentUser = CurrentUser()
-	if util.prog_rights[currentUser.Rights] then
-		clearSongs()
-	else
-		util.asProgUser(clearSongs)
-	end
+	util.executeElevated(clearSongs)
 
 	Printf(string.format("Successfully removed all song positions from Layout '%s'.", songLayoutName))
 end

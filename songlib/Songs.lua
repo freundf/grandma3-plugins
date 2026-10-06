@@ -2,8 +2,10 @@ local MIN_SONG_SEQUENCE = 1001
 local MAX_SONG_SEQUENCE = 1999
 
 local LAYOUT_NAME = "SongLayout"
+local SONG_TEMPLATE = "Song Template"
 
 local normalize_pos = require("songlib.Util").normalize_pos
+
 
 
 local function getSongs()
@@ -25,6 +27,18 @@ local function getSongs()
 	
 	return sortedSongs
 end
+
+local function findSequenceByName(songName)
+	local seqPool = DataPool().Sequences
+	for i = 1, #seqPool do
+		local seq = seqPool[i]
+		if IsObjectValid(seq) and seq.Name == songName and seq.No >= MIN_SONG_SEQUENCE and seq.No <= MAX_SONG_SEQUENCE then
+			return seq.No
+		end
+	end
+	return nil
+end
+
 
 local function findFirstFreePosition(layoutName, positions)
 	local layout = DataPool().Layouts[layoutName]
@@ -73,9 +87,63 @@ local function getSongLayout()
 	return songLayout
 end
 
+local function regenerateSongMacro(seqIdx, songName)
+	Cmd(string.format("Delete Macro %d", seqIdx))
+	Cmd(string.format("Store Macro %d '%s' /o", seqIdx, songName))
+	
+	Cmd(string.format("Delete Macro %d.1 Thru /nc", seqIdx))
+	
+	local offCmd = string.format("Off Sequence %d Thru %d", MIN_SONG_SEQUENCE, MAX_SONG_SEQUENCE)
+	local onCmd = string.format("Go Sequence %d Cue 1", seqIdx)
+	local selectCmd = string.format("Select Sequence %d", seqIdx)
+	
+	Cmd(string.format("Insert Macro %d.1", seqIdx))
+	Cmd(string.format("Insert Macro %d.2", seqIdx))
+	Cmd(string.format("Insert Macro %d.3", seqIdx))
+	Cmd(string.format("Set Macro %d.1 Property 'Command' '%s'", seqIdx, offCmd))
+	Cmd(string.format("Set Macro %d.2 Property 'Command' '%s'", seqIdx, onCmd))
+	Cmd(string.format("Set Macro %d.3 Property 'Command' '%s'", seqIdx, selectCmd))
+
+end
+
+local function addSongToLayout(songName, layoutName, freePos)
+	local seqIdx = findSequenceByName(songName)
+	if not seqIdx then
+		ErrEcho("Could not find sequence for song: " .. songName)
+		return
+	end
+	
+	regenerateSongMacro(seqIdx, songName)
+
+    Cmd(string.format("Assign Macro '%s' At Layout '%s'", songName, layoutName))
+    Cmd(string.format("Set Layout '%s'.'%s' Property 'Action' 'Select'", layoutName, songName))
+    Cmd(string.format("Set Layout '%s'.'%s' Property 'Appearance' 'None'", layoutName, songName))
+
+    local targetLayout = DataPool().Layouts[layoutName]
+    if targetLayout then
+        local newItem = targetLayout[#targetLayout]
+        if IsObjectValid(newItem) then
+            newItem.posX = freePos.x
+            newItem.posY = freePos.y
+        end
+    end
+end
+
+local function createSong(songName, seqIdx)
+	Cmd(string.format("Copy Sequence '%s' At Sequence %d", SONG_TEMPLATE, seqIdx))
+	Cmd(string.format("Label Sequence %d '%s'", seqIdx, songName))
+	
+	regenerateSongMacro(seqIdx, songName)
+	
+	Cmd(string.format("Select Sequence %d", seqIdx))
+	
+end
+
 return {
 	getSongLayout = getSongLayout,
 	findFirstFreePosition = findFirstFreePosition,
 	findNextFreeSequence = findNextFreeSequence,
-	getSongs = getSongs
+	getSongs = getSongs,
+	addSongToLayout = addSongToLayout,
+	createSong = createSong
 }

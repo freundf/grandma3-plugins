@@ -17,7 +17,7 @@ local function asUser(user, pw, func, ...)
     local ok = results[1]
     
     if currentUser then
-        Cmd(string.format("Login '%s', ''", currentUser))
+        Cmd(string.format("Login '%s' ''", currentUser))
     end
     
     if not ok then
@@ -39,10 +39,19 @@ local function normalize_pos(val)
 	return val
 end
 
+local function executeElevated(func, ...)
+    local currentUser = CurrentUser()
+    if prog_rights[currentUser.Rights] then
+        return func(...)
+    else
+        return asProgUser(func, ...)
+    end
+end
 
 return {
 	normalize_pos = normalize_pos,
 	asUser = asUser,
 	asProgUser = asProgUser,
-	prog_rights = prog_rights
+	prog_rights = prog_rights,
+	executeElevated = executeElevated
 }

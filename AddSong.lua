@@ -1,8 +1,11 @@
+package.loaded["songlib.Layout"] = nil
+package.loaded["songlib.Songs"] = nil
+package.loaded["songlib.Util"] = nil
+
 local layout = require("songlib.Layout")
 local positions = layout.positions
 local songLib = require("songlib.Songs")
 local util = require("songlib.Util")
-
 
 local function main(displayHandle)
 	local songLayout = songLib.getSongLayout()	
@@ -14,7 +17,7 @@ local function main(displayHandle)
 	end
 
 	local selectedIndex, selectedValue = PopupInput({
-		title = "Select Song from List", 
+		title = "Select Song from List",
 		caller = displayHandle,
 		items = songs,
 		selectedValue = songs[1],
@@ -28,33 +31,13 @@ local function main(displayHandle)
 	local freePos = songLib.findFirstFreePosition(songLayout, positions)
 		
 	if not freePos then
-		Printf("Error: All 10 layout positions are currently occupied!")
+		Printf("Error: All layout positions are currently occupied!")
 		return
 	end
 
-	
-	
-	local currentUser = CurrentUser()
-	
-	local function addSong()
-		Cmd(string.format("Assign Sequence '%s' At Layout '%s'", selectedValue, songLayout))
-		Cmd(string.format("Set Layout '%s'.'%s' Property 'Action' 'Select'", songLayout, selectedValue))
-
-		local targetLayout = DataPool().Layouts[songLayout]
-		if targetLayout then
-			local newItem = targetLayout[#targetLayout]
-			if IsObjectValid(newItem) then
-				newItem.posX = freePos.x
-				newItem.posY = freePos.y
-			end
-		end
-	end
-	
-	if util.prog_rights[currentUser.Rights] then
-		addSong()
-	else
-		util.asProgUser(addSong)
-	end
+	util.executeElevated(function()
+		songLib.addSongToLayout(selectedValue, songLayout, freePos)
+	end)
 end
 
 return main

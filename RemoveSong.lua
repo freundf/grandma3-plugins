@@ -1,3 +1,7 @@
+package.loaded["songlib.Layout"] = nil
+package.loaded["songlib.Songs"] = nil
+package.loaded["songlib.Util"] = nil
+
 local layoutModule = require("songlib.Layout")
 local positions = layoutModule.positions
 local songLib = require("songlib.Songs")
@@ -46,12 +50,7 @@ local function main(displayHandle)
 		end
 	end
 
-	local currentUser = CurrentUser()
-	if util.prog_rights[currentUser.Rights] then
-		removeSong()
-	else
-		util.asProgUser(removeSong)
-	end
+	util.executeElevated(removeSong)
 end
 
 return main
